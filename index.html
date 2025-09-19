@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Mystery for You</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'VT323', monospace;
+            background-color: #0d0d21;
+            color: #e0e0e0;
+            image-rendering: pixelated;
+        }
+        .font-pixel {
+            font-family: 'Press Start 2P', cursive;
+        }
+        .card {
+            background-color: rgba(26, 26, 58, 0.9);
+            border: 4px solid #3a3a5a;
+            border-radius: 0;
+            box-shadow: 8px 8px 0px #e43f5a;
+            transition: all 0.3s ease-in-out;
+        }
+        .btn {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #e43f5a;
+            color: #ffffff;
+            padding: 1rem 1.5rem;
+            border: 4px solid #3a3a5a;
+            box-shadow: 4px 4px 0px #3a3a5a;
+            transition: all 0.2s ease-in-out;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+        .btn:hover:not(:disabled) {
+            background-color: #ff577a;
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #3a3a5a;
+        }
+        .btn:disabled {
+            background-color: #5a5a7a;
+            cursor: not-allowed;
+            opacity: 0.6;
+            box-shadow: none;
+            transform: none;
+        }
+        .page {
+            display: none;
+            animation: fadeIn 0.8s ease-in-out;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .active-page {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .clue {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-left: 4px solid #e43f5a;
+            font-size: 1.5rem;
+        }
+        input[type="text"] {
+            font-family: 'VT323', monospace;
+            background-color: #0d0d21;
+            border: 2px solid #3a3a5a;
+            padding: 0.5rem 1rem;
+            font-size: 1.5rem;
+            color: #e0e0e0;
+            width: 100%;
+        }
+        input[type="text"]:focus {
+            outline: 2px solid #e43f5a;
+        }
+        #cutscene {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #e43f5a;
+            z-index: 9999;
+            display: none;
+        }
+        @keyframes circle-wipe {
+            0% { clip-path: circle(0% at 50% 50%); }
+            50% { clip-path: circle(75% at 50% 50%); }
+            100% { clip-path: circle(0% at 50% 50%); }
+        }
+        #rain-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.7;
+        }
+        .city-scene {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background-image: url('city_bg.jpg');
+            background-size: cover;
+            background-position: center bottom;
+            overflow: hidden;
+            border: 4px solid #3a3a5a;
+        }
+        .lake-scene {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background-image: url('LAKE.jpg');
+            background-size: cover;
+            background-position: center bottom;
+            overflow: hidden;
+            border: 4px solid #3a3a5a;
+        }
+        .detective-container {
+            position: absolute;
+            bottom: 0;
+            left: 2%;
+            width: 250px;
+            height: 250px;
+            z-index: 2;
+            background-image: url('detective.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: bottom center;
+        }
+        .dialogue-box {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            left: auto;
+            width: 60%;
+            background-color: rgba(13, 13, 33, 0.8);
+            border: 4px solid #3a3a5a;
+            padding: 1.5rem;
+            color: white;
+            min-height: 120px;
+            z-index: 3;
+        }
+        .dialogue-box p::after {
+            content: '▋';
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+        .map-container {
+            position: relative;
+            max-width: 800px;
+            margin: auto;
+            border: 4px solid #3a3a5a;
+        }
+        .map-image {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        .hotspot {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: rgba(228, 63, 90, 0.7);
+            border-radius: 50%;
+            border: 2px solid white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+        .hotspot.visited {
+            background-color: rgba(80, 250, 123, 0.7);
+            animation: none;
+            opacity: 0.8;
+        }
+        .hotspot.locked {
+            background-color: rgba(90, 90, 122, 0.7);
+            animation: none;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(228, 63, 90, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(228, 63, 90, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(228, 63, 90, 0); }
+        }
+        .dancing-heart {
+            font-size: 4rem;
+            animation: dance 1.5s infinite ease-in-out;
+            margin: 1rem 0;
+        }
+        @keyframes dance {
+            0%, 100% { transform: rotate(0deg) translateY(0); }
+            25% { transform: rotate(-15deg) translateY(-10px); }
+            50% { transform: rotate(0deg) translateY(0); }
+            75% { transform: rotate(15deg) translateY(-10px); }
+        }
+        .location-bg {
+            background-size: cover;
+            background-position: center;
+        }
+        .bg-cafe {
+            background-image: url('cafe.jpg'); 
+        }
+        .bg-bookstore {
+            background-image: url('BOOK.jpg');
+        }
+        .bg-park {
+            background-image: url('PARK.webp');
+        }
+         .bg-lake {
+            background-image: url('LAKE.jpg');
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-[#0d0d21] to-[#1a1a3a]">
+
+    <canvas id="rain-canvas"></canvas>
+    <div id="cutscene"></div>
+    <div class="fixed top-4 right-4 z-10">
+        <button id="music-btn" onclick="toggleMusic()" class="text-3xl">🔇</button>
+    </div>
+
+    <audio id="bg-music" loop src="bg.mp3"></audio>
+    <audio id="narration-1" src="intro.mp3"></audio>
+    
+    <audio id="evidence-narration" src="first_note.m4a"></audio>
+    <audio id="cafe-riddle-narration" src="second.m4a"></audio>
+    <audio id="cafe-next-narration" src="placeholder.mp3"></audio>
+    <audio id="bookstore-lyric-narration" src="third.mp3"></audio>
+    <audio id="bookstore-next-narration" src="placeholder.mp3"></audio>
+    <audio id="park-memory-narration" src="fourth.m4a"></audio>
+    <audio id="park-next-narration" src="placeholder.mp3"></audio>
+    <audio id="reveal-narration" src="fifth.mp3"></audio>
+    
+    <main id="story-container" class="w-full text-2xl">
+
+        <div id="page-start" class="page active-page">
+            <div class="card p-8 md:p-12 text-center w-full max-w-2xl">
+                <h1 class="font-pixel text-3xl md:text-4xl text-white mb-6">Are you ready?</h1>
+                <p class="mb-8">something exciting is about to happen!</p>
+                <button onclick="navigate('page-hook')" class="btn">Yes!</button>
+            </div>
+        </div>
+
+        <div id="page-hook" class="page">
+             <div class="w-full max-w-4xl">
+                <div class="city-scene">
+                    <div class="detective-container"></div>
+                    <div class="dialogue-box">
+                        <p id="narration-line-1"></p>
+                        <p id="narration-line-2" class="hidden"></p>
+                    </div>
+                </div>
+                <div class="text-center mt-8 hidden" id="hook-button-container">
+                    <button onclick="navigate('page-evidence')" class="btn">Accept the Case</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-evidence" class="page">
+            <div class="card p-8 md:p-12 w-full max-w-3xl">
+                <h1 class="font-pixel text-3xl text-white mb-6 text-center">Primary Evidence</h1>
+                <div class="clue p-6 mb-8">
+                    <p class="italic">
+                        "In a world of fleeting moments, some smiles are worth pausing for. Yours is one of them. I find myself hoping to see it more often, and maybe, just maybe, be the reason for it sometimes."
+                    </p>
+                </div>
+                <p class="mb-8">A note, left at your desk. The trail starts here. The admirer has left a map of significant places. Time to investigate.</p>
+                <div class="text-center">
+                    <button onclick="navigate('page-map')" class="btn">Consult the Map</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="page-map" class="page">
+            <div class="card p-8 md:p-12 w-full max-w-4xl">
+                <h1 class="font-pixel text-3xl text-white mb-8 text-center">Case Map</h1>
+                <div class="map-container">
+                    <img src="city_map.png" alt="A pixel art map of a town" class="map-image">
+                    <div id="hotspot-cafe" class="hotspot" style="top: 25%; left: 18%;" onclick="navigate('page-cafe')"></div>
+                    <div id="hotspot-bookstore" class="hotspot" style="top: 75%; left: 15%;" onclick="navigate('page-bookstore')"></div>
+                    <div id="hotspot-park" class="hotspot" style="top: 40%; left: 45%;" onclick="navigate('page-park')"></div>
+                    <div id="hotspot-lake" class="hotspot" style="top: 65%; left: 70%;" onclick="navigate('page-lake')"></div>
+                </div>
+                 <p id="map-clue" class="text-lg mt-6 text-center text-gray-300 italic">"Start where the aroma of coffee beans and new beginnings fresh."</p>
+            </div>
+        </div>
+
+        <div id="page-cafe" class="page location-bg bg-cafe">
+            <div class="card p-8 md:p-12 w-full max-w-3xl">
+                <h1 class="font-pixel text-2xl text-white mb-6 text-center">Location: The Cozy Cafe</h1>
+                <div class="clue p-6 mb-8">
+                    <h3 class="font-pixel text-xl text-white mb-2">Clue #1: A Riddle on a Napkin</h3>
+                    <p>"You're sweet and calm most of the time,
+But have a cute, fiery spark when you're not fine.
+Your heart is full of love and glowing fire,
+You're my one and only desire.
+
+What are you?"</p>
+                </div>
+                <input type="text" id="riddle-input" placeholder="Type your answer..." oninput="checkCafeRiddle()" data-answer="jwalamukhi">
+                <p id="riddle-feedback" class="text-lg mt-4 h-6"></p>
+                <div id="cafe-next-clue" class="clue p-4 mt-6 hidden">
+                    <p>Correct! On the back of the napkin, another note: "Find me where stories are bound and adventures are found."</p>
+                </div>
+                
+                <div id="cafe-destination-check" class="mt-6 hidden">
+                    <p class="mb-2">So, detective... which place is that?</p>
+                    <input type="text" id="cafe-destination-input" placeholder="Type the location..." oninput="checkDestination('cafe')" data-answer="bookstore">
+                    <p id="cafe-destination-feedback" class="text-lg mt-4 h-6"></p>
+                </div>
+
+                <div class="text-center mt-8">
+                    <button id="cafe-next-btn" onclick="returnToMap('cafe', 'bookstore')" class="btn" disabled>Return to Map</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="page-bookstore" class="page location-bg bg-bookstore">
+             <div class="card p-8 md:p-12 w-full max-w-3xl">
+                <h1 class="font-pixel text-2xl text-white mb-6 text-center">Location: The Quiet Bookstore</h1>
+                <div class="clue p-6 mb-8">
+                    <h3 class="font-pixel text-xl text-white mb-2">Clue #2: A Dog-Eared Page</h3>
+                    <p>A book is left open to a page with a single highlighted lyric. You know this song...</p>
+                    <p class="mt-4">"...And darling, you look ________ tonight."</p>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="checkBookstoreLyric('Perfect')" class="btn">Perfect</button>
+                    <button onclick="checkBookstoreLyric('Wonderful')" class="btn">Wonderful</button>
+                    <button onclick="checkBookstoreLyric('Amazing')" class="btn">Amazing</button>
+                    <button onclick="checkBookstoreLyric('Alright')" class="btn">Alright</button>
+                </div>
+                <p id="lyric-feedback" class="text-lg mt-4 h-6 text-center"></p>
+                 <div id="bookstore-next-clue" class="clue p-4 mt-6 hidden">
+                    <p>That's the one! Tucked into the page is a train ticket with a note: "Let's go to the place with the bench, under the quiet trees."</p>
+                </div>
+
+                <div id="bookstore-destination-check" class="mt-6 hidden">
+                    <p class="mb-2">And where would that be?</p>
+                    <input type="text" id="bookstore-destination-input" placeholder="Type the location..." oninput="checkDestination('bookstore')" data-answer="park">
+                    <p id="bookstore-destination-feedback" class="text-lg mt-4 h-6"></p>
+                </div>
+
+                 <div class="text-center mt-8">
+                    <button id="bookstore-next-btn" onclick="returnToMap('bookstore', 'park')" class="btn" disabled>Return to Map</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="page-park" class="page location-bg bg-park">
+            <div class="card p-8 md:p-12 w-full max-w-3xl">
+                <h1 class="font-pixel text-2xl text-white mb-6 text-center">Location: The Peaceful Park</h1>
+                <div class="clue p-6 mb-8">
+                    <h3 class="font-pixel text-xl text-white mb-2">Clue #3: A Fading Memory</h3>
+                    <p>On the bench, there are three polaroids, face down. You piece together the memory they hold.</p>
+                </div>
+                <div id="memory-box" class="grid grid-cols-1 gap-4">
+                     <button data-order="2" onclick="selectParkFragment(this)" class="btn bg-indigo-600 hover:bg-indigo-500">...when someone gave u that present link...</button>
+                     <button data-order="3" onclick="selectParkFragment(this)" class="btn bg-indigo-600 hover:bg-indigo-500">...your reaction meant everything to me.</button>
+                     <button data-order="1" onclick="selectParkFragment(this)" class="btn bg-indigo-600 hover:bg-indigo-500">Remember that sweet birthday night...</button>
+                </div>
+                 <p id="memory-feedback" class="text-lg mt-4 h-6 text-center"></p>
+                 <div id="park-next-clue" class="clue p-4 mt-6 hidden">
+                    <p>Memory restored! The final polaroid has writing on the back: "One last place to go. Meet me where the water reflects the sky."</p>
+                </div>
+
+                <div id="park-destination-check" class="mt-6 hidden">
+                    <p class="mb-2">The final location is...</p>
+                    <input type="text" id="park-destination-input" placeholder="Type the location..." oninput="checkDestination('park')" data-answer="lake">
+                    <p id="park-destination-feedback" class="text-lg mt-4 h-6"></p>
+                </div>
+
+                 <div class="text-center mt-8">
+                    <button id="park-next-btn" onclick="returnToMap('park', 'lake')" class="btn" disabled>Proceed to Final Location</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-lake" class="page">
+            <div class="w-full max-w-4xl">
+                <div class="lake-scene">
+                    <div class="detective-container"></div>
+                    <div class="dialogue-box">
+                        <p id="reveal-line-1"></p>
+                        <p id="reveal-line-2" class="hidden"></p>
+                        <p id="reveal-line-3" class="hidden"></p>
+                        <p id="reveal-line-4" class="hidden"></p>
+                        <p id="reveal-line-5" class="hidden"></p>
+                    </div>
+                </div>
+                <div class="text-center mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 hidden" id="lake-choices-container">
+                    <button onclick="navigate('page-finale')" class="btn text-xl">Yes!</button>
+                    <button onclick="navigate('page-finale')" class="btn text-xl">Of course!</button>
+                    <button onclick="navigate('page-finale')" class="btn text-xl">Always.</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="page-finale" class="page">
+            <div class="card p-8 md:p-12 text-center w-full max-w-2xl">
+                <h1 class="font-pixel text-4xl md:text-5xl text-[#e43f5a] mb-6 animate-pulse">Yahoooo!.</h1>
+                <img src="dancing.gif" alt="Happy Dance" class="w-48 h-48 mx-auto"> 
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        let currentPage = 'page-start';
+        const cutsceneEl = document.getElementById('cutscene');
+        
+        const gameState = {
+            visited: [],
+            nextLocation: 'cafe' 
+        };
+
+        // ADDED: New function to play narration and stop others
+        function playNarration(audioId) {
+            const narration = document.getElementById(audioId);
+            if (narration) {
+                // Stop all other narrations to prevent overlap
+                document.querySelectorAll('audio').forEach(audio => {
+                    if (audio.id !== 'bg-music' && !audio.paused) {
+                        audio.pause();
+                        audio.currentTime = 0;
+                    }
+                });
+                narration.play();
+            }
+        }
+
+        function navigate(pageId) {
+            cutsceneEl.style.display = 'block';
+            cutsceneEl.style.animation = 'none';
+            cutsceneEl.offsetHeight; 
+            cutsceneEl.style.animation = 'circle-wipe 1.2s ease-in-out forwards';
+            
+            setTimeout(() => {
+                document.getElementById(currentPage)?.classList.remove('active-page');
+                document.getElementById(pageId)?.classList.add('active-page');
+                currentPage = pageId;
+                window.scrollTo(0, 0);
+
+                setTimeout(() => {
+                    cutsceneEl.style.display = 'none';
+                }, 600);
+                
+                // ADDED: Triggers for narration when a page loads
+                if (pageId === 'page-hook') {
+                    startNarrationScene();
+                }
+                if (pageId === 'page-evidence') {
+                    playNarration('evidence-narration');
+                }
+                if (pageId === 'page-cafe') {
+                    playNarration('cafe-riddle-narration');
+                }
+                 if (pageId === 'page-bookstore') {
+                    playNarration('bookstore-lyric-narration');
+                }
+                 if (pageId === 'page-park') {
+                    playNarration('park-memory-narration');
+                }
+                if (pageId === 'page-map') {
+                    updateMap();
+                }
+                if (pageId === 'page-lake') {
+                    startRevealScene();
+                }
+            }, 600);
+        }
+
+        function updateMap() {
+            const locations = ['cafe', 'bookstore', 'park', 'lake'];
+            const clueEl = document.getElementById('map-clue');
+
+            locations.forEach(loc => {
+                const hotspot = document.getElementById(`hotspot-${loc}`);
+                hotspot.classList.remove('visited', 'locked');
+
+                if (gameState.visited.includes(loc)) {
+                    hotspot.classList.add('visited');
+                } else if (loc !== gameState.nextLocation) {
+                    hotspot.classList.add('locked');
+                }
+            });
+
+            if (gameState.nextLocation === 'cafe') {
+                clueEl.textContent = "Start where the aroma of coffee beans and new beginnings is fresh.";
+            } else if (gameState.nextLocation === 'bookstore') {
+                clueEl.textContent = "Next stop: where stories are bound and adventures are found.";
+            } else if (gameState.nextLocation === 'park') {
+                clueEl.textContent = "Next stop: the place with the bench, under the quiet trees.";
+            } else if (gameState.nextLocation === 'lake') {
+                clueEl.textContent = "Final destination: where the water reflects the sky.";
+            }
+        }
+        
+        function returnToMap(visitedLocation, next) {
+            if (!gameState.visited.includes(visitedLocation)) {
+                gameState.visited.push(visitedLocation);
+            }
+            gameState.nextLocation = next;
+            navigate('page-map');
+        }
+
+        function typewriter(text, element, onComplete) {
+            let i = 0;
+            element.innerHTML = '';
+            function type() {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i);
+                    i++;
+                    setTimeout(type, 80);
+                } else if (onComplete) onComplete();
+            }
+            type();
+        }
+
+        function startNarrationScene() {
+            const line1 = document.getElementById('narration-line-1');
+            const line2 = document.getElementById('narration-line-2');
+            const btnContainer = document.getElementById('hook-button-container');
+            const text1 = "On a rainy day, when plans washed away with the storm, something else began to unfold… a secret waiting to be discovered.";
+            const text2 = "Detective Vaishnavi Mishra, a new case has arrived. Someone has hidden their heart — your mission is to find out whose heart it is.";
+            
+            // ADDED: Play intro narration
+            playNarration('narration-1');
+
+            line1.textContent = '';
+            line2.textContent = '';
+            line2.classList.add('hidden');
+            btnContainer.classList.add('hidden');
+            typewriter(text1, line1, () => {
+                setTimeout(() => {
+                    line2.classList.remove('hidden');
+                    typewriter(text2, line2, () => {
+                        setTimeout(() => btnContainer.classList.remove('hidden'), 500);
+                    });
+                }, 1500);
+            });
+        }
+
+        function startRevealScene() {
+            const lines = [
+                document.getElementById('reveal-line-1'),
+                document.getElementById('reveal-line-2'),
+                document.getElementById('reveal-line-3'),
+                document.getElementById('reveal-line-4'),
+                document.getElementById('reveal-line-5')
+            ];
+            const text = [
+                "Ah! You got me! Yeah, I was the one who planned all this...",
+                "I know the rain washed out your murder mystery plan, so I wanted to create a little mystery just for you.",
+                "Detective Vaishnavi Mishra, every clue led to one truth — you’re the smile, the story, the home, and the heart I was searching for.",
+                "And this isn’t the end of a case… it’s the beginning of something beautiful.",
+                "So tell me… will you be the one to share this story with me, not just today, but in every chapter that follows?"
+            ];
+            const btnContainer = document.getElementById('lake-choices-container');
+            btnContainer.classList.add('hidden');
+            
+            // ADDED: Play the final reveal narration
+            playNarration('reveal-narration');
+            
+            let lineIndex = 0;
+            function revealNextLine() {
+                if (lineIndex < lines.length) {
+                    const currentLine = lines[lineIndex];
+                    currentLine.textContent = '';
+                    currentLine.classList.remove('hidden');
+                    typewriter(text[lineIndex], currentLine, () => {
+                        lineIndex++;
+                        setTimeout(revealNextLine, 1000);
+                    });
+                } else {
+                    setTimeout(() => btnContainer.classList.remove('hidden'), 500);
+                }
+            }
+            revealNextLine();
+        }
+
+        function checkCafeRiddle() {
+            const input = document.getElementById('riddle-input');
+            const feedback = document.getElementById('riddle-feedback');
+            const correctAnswer = input.dataset.answer.toLowerCase();
+
+            if (input.value.toLowerCase() === correctAnswer) {
+                feedback.textContent = "Correct!";
+                feedback.style.color = '#50fa7b';
+                input.disabled = true;
+                document.getElementById('cafe-next-clue').classList.remove('hidden');
+                document.getElementById('cafe-destination-check').classList.remove('hidden');
+                
+                // ADDED: Play narration for the next clue
+                playNarration('cafe-next-narration');
+            } else {
+                feedback.textContent = "Keep thinking...";
+                feedback.style.color = '';
+            }
+        }
+
+        function checkBookstoreLyric(choice) {
+            const isCorrect = choice === 'Perfect';
+            const feedback = document.getElementById('lyric-feedback');
+            
+            if (isCorrect) {
+                feedback.textContent = "That's the one!";
+                feedback.style.color = '#50fa7b';
+                document.getElementById('bookstore-next-clue').classList.remove('hidden');
+                document.querySelectorAll('#page-bookstore .btn').forEach(b => b.disabled = true);
+                document.getElementById('bookstore-destination-check').classList.remove('hidden');
+                
+                // ADDED: Play narration for the next clue
+                playNarration('bookstore-next-narration');
+            } else {
+                feedback.textContent = "Not quite, try another.";
+                feedback.style.color = '#ff5555';
+            }
+        }
+
+        let memoryOrder = [];
+        function selectParkFragment(element) {
+            const order = parseInt(element.dataset.order);
+            if (memoryOrder.includes(order)) return;
+            memoryOrder.push(order);
+            element.style.transform = 'scale(0.95)';
+            element.style.opacity = '0.5';
+            element.disabled = true;
+            
+            const isCorrect = memoryOrder.join('') === '123';
+            const feedback = document.getElementById('memory-feedback');
+            
+            if (memoryOrder.length === 3) {
+                if (isCorrect) {
+                    feedback.textContent = "Memory restored!";
+                    feedback.style.color = '#50fa7b';
+                    document.getElementById('park-next-clue').classList.remove('hidden');
+                    document.getElementById('park-destination-check').classList.remove('hidden');
+                    
+                    // ADDED: Play narration for the next clue
+                    playNarration('park-next-narration');
+                } else {
+                    feedback.textContent = "That's not how it happened... try again.";
+                    feedback.style.color = '#ff5555';
+                    setTimeout(() => {
+                        memoryOrder = [];
+                        feedback.textContent = "";
+                        document.querySelectorAll('#memory-box button').forEach(btn => {
+                            btn.style.transform = '';
+                            btn.style.opacity = '1';
+                            btn.disabled = false;
+                        });
+                    }, 1500);
+                }
+            }
+        }
+
+        function checkDestination(location) {
+            const input = document.getElementById(`${location}-destination-input`);
+            const feedback = document.getElementById(`${location}-destination-feedback`);
+            const nextBtn = document.getElementById(`${location}-next-btn`);
+            const correctAnswer = input.dataset.answer.toLowerCase();
+
+            if (input.value.toLowerCase().trim() === correctAnswer) {
+                feedback.textContent = "Precisely! Let's go.";
+                feedback.style.color = '#50fa7b';
+                nextBtn.disabled = false;
+                input.disabled = true;
+            } else {
+                feedback.textContent = "That doesn't seem right...";
+                feedback.style.color = '';
+            }
+        }
+
+        const music = document.getElementById('bg-music');
+        const musicBtn = document.getElementById('music-btn');
+        let isPlaying = false;
+        function toggleMusic() {
+            if (isPlaying) {
+                music.pause();
+                musicBtn.textContent = '🔇';
+            } else {
+                music.play();
+                musicBtn.textContent = '🎵';
+            }
+            isPlaying = !isPlaying;
+        }
+
+        const canvas = document.getElementById('rain-canvas');
+        const ctx = canvas.getContext('2d');
+        let drops = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        function createDrops() {
+            drops = [];
+            for (let i = 0; i < 100; i++) {
+                drops.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    length: Math.random() * 20 + 10,
+                    speed: Math.random() * 5 + 2
+                });
+            }
+        }
+        function drawRain() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'rgba(174,194,224,0.5)';
+            ctx.lineWidth = 1;
+            ctx.lineCap = 'round';
+            for (let i = 0; i < drops.length; i++) {
+                let d = drops[i];
+                ctx.beginPath();
+                ctx.moveTo(d.x, d.y);
+                ctx.lineTo(d.x, d.y + d.length);
+                ctx.stroke();
+            }
+        }
+        function updateRain() {
+            for (let i = 0; i < drops.length; i++) {
+                let d = drops[i];
+                d.y += d.speed;
+                if (d.y > canvas.height) {
+                    d.y = 0 - d.length;
+                    d.x = Math.random() * canvas.width;
+                }
+            }
+        }
+        function animateRain() {
+            updateRain();
+            drawRain();
+            requestAnimationFrame(animateRain);
+        }
+        
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            createDrops();
+        });
+        resizeCanvas();
+        createDrops();
+        animateRain();
+    </script>
+</body>
+</html>
